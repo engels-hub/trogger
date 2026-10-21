@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.Trogger" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FFF7F7F2</item>
+    </style>
+</resources>
