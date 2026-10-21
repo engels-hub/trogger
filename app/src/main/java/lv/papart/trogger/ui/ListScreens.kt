@@ -41,7 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import lv.papart.trogger.EXPENSE_CATEGORIES
 import lv.papart.trogger.Expense
-import lv.papart.trogger.MONTHS_LV
+import lv.papart.trogger.categoryLabel
+import lv.papart.trogger.monthName
 import lv.papart.trogger.Repo
 import lv.papart.trogger.Trip
 import lv.papart.trogger.fmtDate
@@ -50,11 +51,13 @@ import lv.papart.trogger.fmtKm
 import lv.papart.trogger.fmtNum
 import lv.papart.trogger.fmtTime
 import lv.papart.trogger.parseNum
+import lv.papart.trogger.kmUnit
+import lv.papart.trogger.tr
 import java.util.Calendar
 
 private fun monthKey(ms: Long): String {
     val c = Calendar.getInstance().apply { timeInMillis = ms }
-    return "${MONTHS_LV[c.get(Calendar.MONTH)]} ${c.get(Calendar.YEAR)}"
+    return "${monthName(c.get(Calendar.MONTH))} ${c.get(Calendar.YEAR)}"
 }
 
 @Composable
@@ -76,14 +79,14 @@ fun TripsScreen() {
     Box(Modifier.fillMaxSize()) {
         if (done.isEmpty()) {
             Text(
-                "Vēl nav braucienu. Sāciet maiņu vai pievienojiet braucienu manuāli (arī privātos).",
+                tr("Vēl nav braucienu. Sāciet maiņu vai pievienojiet braucienu manuāli (arī privātos).", "Поездок пока нет. Начните смену или добавьте поездку вручную (в том числе личную)."),
                 modifier = Modifier.padding(24.dp), style = MaterialTheme.typography.bodyLarge,
             )
         }
         LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
             done.groupBy { monthKey(it.startMs) }.forEach { (month, list) ->
                 item(key = "h$month") {
-                    MonthHeader(month, "${fmtKm(list.filter { it.business }.sumOf { it.km })} km darba")
+                    MonthHeader(month, tr("${fmtKm(list.filter { it.business }.sumOf { it.km })} km darba", "${fmtKm(list.filter { it.business }.sumOf { it.km })} км рабочих"))
                 }
                 items(list, key = { it.id }) { t ->
                     Row(
@@ -96,13 +99,13 @@ fun TripsScreen() {
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                             Text(
-                                listOf(if (t.business) t.platform else "Privāts", if (t.auto) "auto" else "", t.route).filter { it.isNotEmpty() }.joinToString(" · "),
+                                listOf(if (t.business) t.platform else tr("Privāts", "Личная"), if (t.auto) tr("auto", "авто") else "", t.route).filter { it.isNotEmpty() }.joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = if (t.business) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Text("${fmtKm(t.km)} km", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text("${fmtKm(t.km)} ${kmUnit()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
                     HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                 }
@@ -114,7 +117,7 @@ fun TripsScreen() {
                 editing = Trip(startMs = now - 3600_000, endMs = now, purpose = Repo.settings.value.purpose)
             },
             icon = { Icon(Icons.Default.Add, null) },
-            text = { Text("Brauciens") },
+            text = { Text(tr("Brauciens", "Поездка")) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
@@ -141,7 +144,7 @@ fun TripDialog(trip: Trip, onClose: () -> Unit) {
     val odoBad = os != null && oe != null && oe < os
 
     FormDialog(
-        title = if (trip.id == 0L) "Jauns brauciens" else "Brauciens",
+        title = if (trip.id == 0L) tr("Jauns brauciens", "Новая поездка") else tr("Brauciens", "Поездка"),
         onDismiss = onClose,
         saveEnabled = !odoBad && end >= start,
         onSave = {
@@ -158,30 +161,30 @@ fun TripDialog(trip: Trip, onClose: () -> Unit) {
         onDelete = if (trip.id != 0L) ({ Repo.deleteTrip(trip.id); onClose() }) else null,
     ) {
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            SegmentedButton(business, { business = true }, SegmentedButtonDefaults.itemShape(0, 2)) { Text("Darba") }
-            SegmentedButton(!business, { business = false }, SegmentedButtonDefaults.itemShape(1, 2)) { Text("Privāts") }
+            SegmentedButton(business, { business = true }, SegmentedButtonDefaults.itemShape(0, 2)) { Text(tr("Darba", "Рабочая")) }
+            SegmentedButton(!business, { business = false }, SegmentedButtonDefaults.itemShape(1, 2)) { Text(tr("Privāts", "Личная")) }
         }
-        DateTimeRow("Sākums", start, { start = it; if (end < it) end = it })
-        DateTimeRow("Beigas", end, { end = it })
+        DateTimeRow(tr("Sākums", "Начало"), start, { start = it; if (end < it) end = it })
+        DateTimeRow(tr("Beigas", "Конец"), end, { end = it })
         Row {
-            NumIn("Odometrs sākumā", odoStart, { odoStart = it }, Modifier.weight(1f))
+            NumIn(tr("Odometrs sākumā", "Одометр в начале"), odoStart, { odoStart = it }, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
-            NumIn("Odometrs beigās", odoEnd, { odoEnd = it }, Modifier.weight(1f))
+            NumIn(tr("Odometrs beigās", "Одометр в конце"), odoEnd, { odoEnd = it }, Modifier.weight(1f))
         }
-        if (odoBad) Text("Beigu rādījums ir mazāks par sākuma.", color = MaterialTheme.colorScheme.error)
-        if (os != null && oe != null && !odoBad) StatRow("Nobraukts pēc odometra", "${fmtKm(oe - os)} km", strong = true)
-        NumIn("GPS kilometri", gps, { gps = it }, suffix = "km")
-        TextIn("Maršruts", route, { route = it }, placeholder = "Rīga – piegādes pa pilsētu")
+        if (odoBad) Text(tr("Beigu rādījums ir mazāks par sākuma.", "Конечное показание меньше начального."), color = MaterialTheme.colorScheme.error)
+        if (os != null && oe != null && !odoBad) StatRow(tr("Nobraukts pēc odometra", "Пробег по одометру"), "${fmtKm(oe - os)} ${kmUnit()}", strong = true)
+        NumIn(tr("GPS kilometri", "Километры по GPS"), gps, { gps = it }, suffix = kmUnit())
+        TextIn(tr("Maršruts", "Маршрут"), route, { route = it }, placeholder = tr("Rīga – piegādes pa pilsētu", "Rīga – piegādes pa pilsētu"))
         if (business) {
-            TextIn("Brauciena mērķis", purpose, { purpose = it })
-            Text("Platforma", style = MaterialTheme.typography.labelLarge)
+            TextIn(tr("Brauciena mērķis", "Цель поездки"), purpose, { purpose = it })
+            Text(tr("Platforma", "Платформа"), style = MaterialTheme.typography.labelLarge)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 (settings.platforms + listOfNotNull(platform.takeIf { it.isNotEmpty() && it !in settings.platforms })).forEach { p ->
                     FilterChip(selected = platform == p, onClick = { platform = p }, label = { Text(p) })
                 }
             }
         }
-        TextIn("Piezīmes", note, { note = it }, singleLine = false)
+        TextIn(tr("Piezīmes", "Заметки"), note, { note = it }, singleLine = false)
     }
 }
 
@@ -195,7 +198,7 @@ fun ExpensesScreen() {
     Box(Modifier.fillMaxSize()) {
         if (expenses.isEmpty()) {
             Text(
-                "Pievienojiet degvielas čekus, remontu, OCTA, apskati u.c. Saglabājiet arī pašus čekus – VID var tos pieprasīt.",
+                tr("Pievienojiet degvielas čekus, remontu, OCTA, apskati u.c. Saglabājiet arī pašus čekus – VID var tos pieprasīt.", "Добавляйте чеки за топливо, ремонт, OCTA, техосмотр и т. д. Сохраняйте и сами чеки – VID может их запросить."),
                 modifier = Modifier.padding(24.dp), style = MaterialTheme.typography.bodyLarge,
             )
         }
@@ -208,11 +211,11 @@ fun ExpensesScreen() {
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Column(Modifier.weight(1f)) {
-                            Text(e.category, style = MaterialTheme.typography.bodyLarge)
+                            Text(categoryLabel(e.category), style = MaterialTheme.typography.bodyLarge)
                             Text(
                                 listOfNotNull(
                                     fmtDate(e.dateMs), e.vendor.takeIf { it.isNotEmpty() },
-                                    e.liters?.let { "${fmtNum(it, 2)} l" }, "100% darbam".takeIf { e.fullyBusiness },
+                                    e.liters?.let { "${fmtNum(it, 2)} " + tr("l", "л") }, tr("100% darbam", "100% для работы").takeIf { e.fullyBusiness },
                                 ).joinToString(" · "),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -228,7 +231,7 @@ fun ExpensesScreen() {
         ExtendedFloatingActionButton(
             onClick = { editing = Expense(dateMs = System.currentTimeMillis(), category = EXPENSE_CATEGORIES[0], amount = 0.0) },
             icon = { Icon(Icons.Default.Add, null) },
-            text = { Text("Izdevums") },
+            text = { Text(tr("Izdevums", "Расход")) },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         )
     }
@@ -251,7 +254,7 @@ fun ExpenseDialog(e: Expense, onClose: () -> Unit) {
     val amt = parseNum(amount)
 
     FormDialog(
-        title = if (e.id == 0L) "Jauns izdevums" else "Izdevums",
+        title = if (e.id == 0L) tr("Jauns izdevums", "Новый расход") else tr("Izdevums", "Расход"),
         onDismiss = onClose,
         saveEnabled = amt != null && amt > 0,
         onSave = {
@@ -267,28 +270,28 @@ fun ExpenseDialog(e: Expense, onClose: () -> Unit) {
         },
         onDelete = if (e.id != 0L) ({ Repo.deleteExpense(e.id); onClose() }) else null,
     ) {
-        DateTimeRow("Datums", date, { date = it }, showTime = false)
-        Text("Kategorija", style = MaterialTheme.typography.labelLarge)
+        DateTimeRow(tr("Datums", "Дата"), date, { date = it }, showTime = false)
+        Text(tr("Kategorija", "Категория"), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             EXPENSE_CATEGORIES.forEach { c ->
-                FilterChip(selected = category == c, onClick = { category = c }, label = { Text(c) })
+                FilterChip(selected = category == c, onClick = { category = c }, label = { Text(categoryLabel(c)) })
             }
         }
-        NumIn("Summa", amount, { amount = it }, suffix = "€")
-        if (category == "Degviela") NumIn("Litri", liters, { liters = it }, suffix = "l")
-        NumIn("Odometra rādījums (nav obligāts)", odo, { odo = it }, suffix = "km")
-        TextIn("Pārdevējs", vendor, { vendor = it }, placeholder = "Circle K, Neste, Viada…")
-        TextIn("Čeka / rēķina nr.", docNo, { docNo = it })
+        NumIn(tr("Summa", "Сумма"), amount, { amount = it }, suffix = "€")
+        if (category == "Degviela") NumIn(tr("Litri", "Литры"), liters, { liters = it }, suffix = tr("l", "л"))
+        NumIn(tr("Odometra rādījums (nav obligāts)", "Показание одометра (необязательно)"), odo, { odo = it }, suffix = kmUnit())
+        TextIn(tr("Pārdevējs", "Продавец"), vendor, { vendor = it }, placeholder = "Circle K, Neste, Viada…")
+        TextIn(tr("Čeka / rēķina nr.", "№ чека / счёта"), docNo, { docNo = it })
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(full, { full = it })
             Column {
-                Text("100% saimnieciskajai darbībai")
+                Text(tr("100% saimnieciskajai darbībai", "100% для хозяйственной деятельности"))
                 Text(
-                    "Piem., stāvvieta piegādes laikā. Citi izdevumi tiek reizināti ar darba īpatsvaru.",
+                    tr("Piem., stāvvieta piegādes laikā. Citi izdevumi tiek reizināti ar darba īpatsvaru.", "Напр., парковка во время доставки. Остальные расходы умножаются на долю рабочих поездок."),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
-        TextIn("Piezīmes", note, { note = it }, singleLine = false)
+        TextIn(tr("Piezīmes", "Заметки"), note, { note = it }, singleLine = false)
     }
 }

@@ -379,10 +379,10 @@ class TrackingService : Service(), LocationListener {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val (title, text) = when (mode) {
-            Mode.TRACKING -> (if (tripAuto) "Brauciens (automātiski)" else "Maiņa aktīva") to
-                (if (gpsOk) "${fmtKm(km)} km · ${speedKmh.toInt()} km/h" else "${fmtKm(km)} km · gaida GPS signālu")
-            Mode.CONFIRM -> "Pārbauda braukšanu…" to "${speedKmh.toInt()} km/h"
-            else -> "Automātiskā uzskaite" to "Gaida, kad sāksiet braukt"
+            Mode.TRACKING -> (if (tripAuto) tr("Brauciens (automātiski)", "Поездка (автоматически)") else tr("Maiņa aktīva", "Смена активна")) to
+                (if (gpsOk) tr("${fmtKm(km)} km · ${speedKmh.toInt()} km/h", "${fmtKm(km)} км · ${speedKmh.toInt()} км/ч") else tr("${fmtKm(km)} km · gaida GPS signālu", "${fmtKm(km)} км · ожидание сигнала GPS"))
+            Mode.CONFIRM -> tr("Pārbauda braukšanu…", "Проверка поездки…") to tr("${speedKmh.toInt()} km/h", "${speedKmh.toInt()} км/ч")
+            else -> tr("Automātiskā uzskaite", "Автоматический учёт") to tr("Gaida, kad sāksiet braukt", "Ждёт начала поездки")
         }
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
@@ -405,8 +405,8 @@ class TrackingService : Service(), LocationListener {
             NOTIF_TRIP_SAVED,
             NotificationCompat.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_notif)
-                .setContentTitle("Brauciens saglabāts")
-                .setContentText("${fmtKm(km)} km · pārbaudiet un ierakstiet odometru")
+                .setContentTitle(tr("Brauciens saglabāts", "Поездка сохранена"))
+                .setContentText(tr("${fmtKm(km)} km · pārbaudiet un ierakstiet odometru", "${fmtKm(km)} км · проверьте и внесите одометр"))
                 .setAutoCancel(true)
                 .setContentIntent(open)
                 .build(),

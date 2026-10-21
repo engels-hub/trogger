@@ -60,6 +60,9 @@ import lv.papart.trogger.fmtNum
 import lv.papart.trogger.fmtTime
 import lv.papart.trogger.parseNum
 import lv.papart.trogger.summarize
+import lv.papart.trogger.uiLabel
+import lv.papart.trogger.kmUnit
+import lv.papart.trogger.tr
 import java.util.Calendar
 import kotlin.math.roundToLong
 
@@ -118,31 +121,31 @@ fun ShiftScreen() {
     ) {
         if (!batteryOk) {
             SectionCard {
-                Text("Atļaujiet darboties fonā", fontWeight = FontWeight.Bold)
+                Text(tr("Atļaujiet darboties fonā", "Разрешите работу в фоне"), fontWeight = FontWeight.Bold)
                 Text(
-                    "Lai GPS uzskaite neapstātos ar izslēgtu ekrānu, izslēdziet akumulatora optimizāciju šai lietotnei. " +
-                        "Xiaomi tālruņos arī: Iestatījumi → Lietotnes → trogger → Akumulators → Bez ierobežojumiem, un ieslēdziet Autostart.",
+                    tr("Lai GPS uzskaite neapstātos ar izslēgtu ekrānu, izslēdziet akumulatora optimizāciju šai lietotnei. ", "Чтобы учёт по GPS не останавливался при выключенном экране, отключите оптимизацию батареи для этого приложения. ") +
+                        tr("Xiaomi tālruņos arī: Iestatījumi → Lietotnes → trogger → Akumulators → Bez ierobežojumiem, un ieslēdziet Autostart.", "На Xiaomi также: Настройки → Приложения → trogger → Батарея → Нет ограничений, и включите Автозапуск."),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 OutlinedButton(onClick = {
                     ctx.startActivity(
                         Intent(AndroidSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}"))
                     )
-                }) { Text("Atļaut") }
+                }) { Text(tr("Atļaut", "Разрешить")) }
             }
         }
 
         SectionCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Automātiskā uzskaite", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Automātiskā uzskaite", "Автоматический учёт"), style = MaterialTheme.typography.titleMedium)
                     Text(
                         when {
-                            !settings.autoEnabled -> "Brauciens sāksies pats, kad sāksiet braukt ar auto ātrumu."
-                            live == null -> "Apturēta – atveriet lietotni vai pārslēdziet."
-                            live!!.mode == Mode.CONFIRM -> "Pārbauda ātrumu… ${live!!.speedKmh.toInt()} km/h"
-                            live!!.mode == Mode.WATCH -> "Gaida braukšanu"
-                            else -> "Ieslēgta"
+                            !settings.autoEnabled -> tr("Brauciens sāksies pats, kad sāksiet braukt ar auto ātrumu.", "Поездка начнётся сама, когда вы поедете со скоростью автомобиля.")
+                            live == null -> tr("Apturēta – atveriet lietotni vai pārslēdziet.", "Остановлен – откройте приложение или переключите.")
+                            live!!.mode == Mode.CONFIRM -> tr("Pārbauda ātrumu… ${live!!.speedKmh.toInt()} km/h", "Проверка скорости… ${live!!.speedKmh.toInt()} км/ч")
+                            live!!.mode == Mode.WATCH -> tr("Gaida braukšanu", "Ожидание поездки")
+                            else -> tr("Ieslēgta", "Включён")
                         },
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -159,20 +162,20 @@ fun ShiftScreen() {
             }
             if (settings.autoEnabled && !bgLocation) {
                 Text(
-                    "Lai uzskaite atsāktos pati pēc tālruņa restartēšanas, atļaujiet atrašanās vietu \"Vienmēr\".",
+                    tr("Lai uzskaite atsāktos pati pēc tālruņa restartēšanas, atļaujiet atrašanās vietu \"Vienmēr\".", "Чтобы учёт возобновлялся сам после перезагрузки телефона, разрешите геолокацию \"Всегда\"."),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 OutlinedButton(onClick = {
                     if (Build.VERSION.SDK_INT >= 29) bgLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                }) { Text("Atļaut vienmēr") }
+                }) { Text(tr("Atļaut vienmēr", "Разрешить всегда")) }
             }
         }
 
         if (active == null) {
             SectionCard {
-                Text("Nav aktīva brauciena", style = MaterialTheme.typography.titleLarge)
+                Text(tr("Nav aktīva brauciena", "Нет активной поездки"), style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "Sāciet maiņu pirms pirmā pasūtījuma. Lietotne skaitīs kilometrus pēc GPS arī ar izslēgtu ekrānu.",
+                    tr("Sāciet maiņu pirms pirmā pasūtījuma. Lietotne skaitīs kilometrus pēc GPS arī ar izslēgtu ekrānu.", "Начните смену перед первым заказом. Приложение будет считать километры по GPS и при выключенном экране."),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Button(
@@ -180,7 +183,7 @@ fun ShiftScreen() {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
                     Icon(Icons.Default.PlayArrow, null)
-                    Text("  Sākt maiņu", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("  Sākt maiņu", "  Начать смену"), style = MaterialTheme.typography.titleMedium)
                 }
             }
         } else {
@@ -188,7 +191,7 @@ fun ShiftScreen() {
             val tracking = live?.tripId == active.id
             SectionCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (active.auto) "Brauciens (automātiski)" else "Maiņa aktīva", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    Text(if (active.auto) tr("Brauciens (automātiski)", "Поездка (автоматически)") else tr("Maiņa aktīva", "Смена активна"), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                     Icon(
                         if (tracking && live!!.gpsOk) Icons.Default.GpsFixed else Icons.Default.GpsNotFixed,
                         contentDescription = null,
@@ -196,33 +199,33 @@ fun ShiftScreen() {
                     )
                 }
                 Text(
-                    "${fmtKm(km)} km",
+                    "${fmtKm(km)} ${kmUnit()}",
                     style = MaterialTheme.typography.displayMedium,
                     fontWeight = FontWeight.Bold,
                 )
-                if (tracking) StatRow("Ātrums", "${live!!.speedKmh.toInt()} km/h")
-                StatRow("Sākts", fmtTime(active.startMs))
-                StatRow("Ilgums", duration(now - active.startMs))
-                if (active.platform.isNotEmpty()) StatRow("Platforma", active.platform)
-                active.odoStart?.let { StatRow("Odometrs sākumā", "${fmtNum(it, 0)} km") }
+                if (tracking) StatRow(tr("Ātrums", "Скорость"), tr("${live!!.speedKmh.toInt()} km/h", "${live!!.speedKmh.toInt()} км/ч"))
+                StatRow(tr("Sākts", "Начало"), fmtTime(active.startMs))
+                StatRow(tr("Ilgums", "Длительность"), duration(now - active.startMs))
+                if (active.platform.isNotEmpty()) StatRow(tr("Platforma", "Платформа"), active.platform)
+                active.odoStart?.let { StatRow(tr("Odometrs sākumā", "Одометр в начале"), "${fmtNum(it, 0)} ${kmUnit()}") }
                 if (active.auto) Text(
-                    "Beigsies pats pēc ${settings.autoStopMin} min stāvēšanas.",
+                    tr("Beigsies pats pēc ${settings.autoStopMin} min stāvēšanas.", "Завершится сама после ${settings.autoStopMin} мин стоянки."),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 if (!tracking) {
                     Text(
-                        "GPS uzskaite ir apturēta (sistēma aizvēra lietotni). Nospiediet, lai turpinātu.",
+                        tr("GPS uzskaite ir apturēta (sistēma aizvēra lietotni). Nospiediet, lai turpinātu.", "Учёт по GPS остановлен (система закрыла приложение). Нажмите, чтобы продолжить."),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
                     )
-                    OutlinedButton(onClick = { withLocation { TrackingService.sync(ctx) } }) { Text("Turpināt uzskaiti") }
+                    OutlinedButton(onClick = { withLocation { TrackingService.sync(ctx) } }) { Text(tr("Turpināt uzskaiti", "Продолжить учёт")) }
                 }
                 Button(
                     onClick = { showEnd = true },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                 ) {
                     Icon(Icons.Default.Stop, null)
-                    Text(if (active.auto) "  Beigt braucienu" else "  Beigt maiņu", style = MaterialTheme.typography.titleMedium)
+                    Text(if (active.auto) tr("  Beigt braucienu", "  Завершить поездку") else tr("  Beigt maiņu", "  Завершить смену"), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
@@ -235,11 +238,11 @@ fun ShiftScreen() {
         val month = summarize(Period.of(cal.get(Calendar.YEAR), cal.get(Calendar.MONTH)), trips, expenses, readings)
         val year = summarize(Period.of(cal.get(Calendar.YEAR), null), trips, expenses, readings)
         SectionCard {
-            Text("Darba kilometri", style = MaterialTheme.typography.titleMedium)
-            StatRow("Šodien", "${fmtKm(todayKm)} km")
-            StatRow("${month.period.label} (${month.shifts} maiņas)", "${fmtKm(month.businessKm)} km")
-            StatRow("Gadā", "${fmtKm(year.businessKm)} km")
-            StatRow("Darba īpatsvars gadā", "${fmtKm(year.businessShare * 100)} %", strong = true)
+            Text(tr("Darba kilometri", "Рабочие километры"), style = MaterialTheme.typography.titleMedium)
+            StatRow(tr("Šodien", "Сегодня"), "${fmtKm(todayKm)} ${kmUnit()}")
+            StatRow("${month.period.uiLabel()} (" + tr("${month.shifts} maiņas", "смен: ${month.shifts}") + ")", "${fmtKm(month.businessKm)} ${kmUnit()}")
+            StatRow(tr("Gadā", "За год"), "${fmtKm(year.businessKm)} ${kmUnit()}")
+            StatRow(tr("Darba īpatsvars gadā", "Доля рабочих за год"), "${fmtKm(year.businessShare * 100)} %", strong = true)
         }
     }
 
@@ -248,11 +251,11 @@ fun ShiftScreen() {
         var platform by remember { mutableStateOf(settings.platforms.firstOrNull() ?: "") }
         AlertDialog(
             onDismissRequest = { showStart = false },
-            title = { Text("Sākt maiņu") },
+            title = { Text(tr("Sākt maiņu", "Начать смену")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    NumIn("Odometra rādījums", odo, { odo = it }, suffix = "km")
-                    Text("Platforma", style = MaterialTheme.typography.labelLarge)
+                    NumIn(tr("Odometra rādījums", "Показание одометра"), odo, { odo = it }, suffix = kmUnit())
+                    Text(tr("Platforma", "Платформа"), style = MaterialTheme.typography.labelLarge)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         settings.platforms.forEach { p ->
                             FilterChip(selected = platform == p, onClick = { platform = p }, label = { Text(p) })
@@ -270,9 +273,9 @@ fun ShiftScreen() {
                     )
                     TrackingService.sync(ctx)
                     showStart = false
-                }) { Text("Sākt") }
+                }) { Text(tr("Sākt", "Начать")) }
             },
-            dismissButton = { TextButton(onClick = { showStart = false }) { Text("Atcelt") } },
+            dismissButton = { TextButton(onClick = { showStart = false }) { Text(tr("Atcelt", "Отмена")) } },
         )
     }
 
@@ -286,7 +289,7 @@ fun ShiftScreen() {
         var note by remember { mutableStateOf("") }
         var confirmDiscard by remember { mutableStateOf(false) }
         FormDialog(
-            title = if (active.auto) "Beigt braucienu" else "Beigt maiņu",
+            title = if (active.auto) tr("Beigt braucienu", "Завершить поездку") else tr("Beigt maiņu", "Завершить смену"),
             onDismiss = { showEnd = false },
             onSave = {
                 Repo.saveTrip(
@@ -299,31 +302,31 @@ fun ShiftScreen() {
                 showEnd = false
             },
         ) {
-            StatRow("GPS nobraukums", "${fmtKm(gpsKm)} km", strong = true)
-            NumIn("Odometra rādījums beigās", odo, { odo = it }, suffix = "km")
+            StatRow(tr("GPS nobraukums", "Пробег по GPS"), "${fmtKm(gpsKm)} ${kmUnit()}", strong = true)
+            NumIn(tr("Odometra rādījums beigās", "Показание одометра в конце"), odo, { odo = it }, suffix = kmUnit())
             Text(
-                "Ieteikums aprēķināts no sākuma rādījuma un GPS. Ierakstiet faktisko rādījumu no paneļa – ceļazīmē tiek izmantots odometrs.",
+                tr("Ieteikums aprēķināts no sākuma rādījuma un GPS. Ierakstiet faktisko rādījumu no paneļa – ceļazīmē tiek izmantots odometrs.", "Подсказка рассчитана по начальному показанию и GPS. Введите фактическое показание с приборной панели – в путевом листе используется одометр."),
                 style = MaterialTheme.typography.bodySmall,
             )
-            TextIn("Maršruts", route, { route = it }, placeholder = "Rīga – piegādes pa pilsētu")
-            TextIn("Piezīmes", note, { note = it }, singleLine = false)
+            TextIn(tr("Maršruts", "Маршрут"), route, { route = it }, placeholder = tr("Rīga – piegādes pa pilsētu", "Rīga – piegādes pa pilsētu"))
+            TextIn(tr("Piezīmes", "Заметки"), note, { note = it }, singleLine = false)
             TextButton(onClick = { confirmDiscard = true }) {
-                Text("Atmest maiņu (nesaglabāt)", color = MaterialTheme.colorScheme.error)
+                Text(tr("Atmest maiņu (nesaglabāt)", "Отменить смену (не сохранять)"), color = MaterialTheme.colorScheme.error)
             }
         }
         if (confirmDiscard) {
             AlertDialog(
                 onDismissRequest = { confirmDiscard = false },
-                title = { Text("Atmest maiņu?") },
-                text = { Text("Maiņa un tās GPS dati tiks dzēsti.") },
+                title = { Text(tr("Atmest maiņu?", "Отменить смену?")) },
+                text = { Text(tr("Maiņa un tās GPS dati tiks dzēsti.", "Смена и её данные GPS будут удалены.")) },
                 confirmButton = {
                     TextButton(onClick = {
                         Repo.deleteTrip(active.id)
                         TrackingService.sync(ctx)
                         confirmDiscard = false; showEnd = false
-                    }) { Text("Atmest") }
+                    }) { Text(tr("Atmest", "Отменить")) }
                 },
-                dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Atcelt") } },
+                dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text(tr("Atcelt", "Отмена")) } },
             )
         }
     }
@@ -331,5 +334,5 @@ fun ShiftScreen() {
 
 private fun duration(ms: Long): String {
     val m = (ms / 60000).coerceAtLeast(0)
-    return "${m / 60} h ${m % 60} min"
+    return tr("${m / 60} h ${m % 60} min", "${m / 60} ч ${m % 60} мин")
 }

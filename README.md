@@ -1,6 +1,6 @@
 # trogger
 
-A personal mileage log for one car, built for a courier who is self-employed in Latvia. The interface is in Latvian. It is a small, offline take on apps like Driversnote.
+A personal mileage log for one car, built for a courier who is self-employed in Latvia. The interface is in Latvian or Russian (switch in settings); reports and exports are always in Latvian. It is a small, offline take on apps like Driversnote.
 
 ## Features
 

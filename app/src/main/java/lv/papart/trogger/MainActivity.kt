@@ -20,7 +20,9 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -34,13 +36,13 @@ import lv.papart.trogger.ui.SettingsDialog
 import lv.papart.trogger.ui.ShiftScreen
 import lv.papart.trogger.ui.TripsScreen
 
-private data class Tab(val title: String, val icon: ImageVector)
+private data class Tab(val title: () -> String, val icon: ImageVector)
 
 private val TABS = listOf(
-    Tab("Maiņa", Icons.Default.DirectionsCar),
-    Tab("Braucieni", Icons.Default.Route),
-    Tab("Izdevumi", Icons.AutoMirrored.Filled.ReceiptLong),
-    Tab("Atskaites", Icons.Default.Assessment),
+    Tab({ tr("Maiņa", "Смена") }, Icons.Default.DirectionsCar),
+    Tab({ tr("Braucieni", "Поездки") }, Icons.Default.Route),
+    Tab({ tr("Izdevumi", "Расходы") }, Icons.AutoMirrored.Filled.ReceiptLong),
+    Tab({ tr("Atskaites", "Отчёты") }, Icons.Default.Assessment),
 )
 
 class MainActivity : ComponentActivity() {
@@ -63,12 +65,15 @@ class MainActivity : ComponentActivity() {
             TroggerTheme {
                 var tab by rememberSaveable { mutableIntStateOf(0) }
                 var settings by rememberSaveable { mutableStateOf(false) }
+                val lang = Repo.settings.collectAsState().value.lang
+                // tr() is not reactive; rebuild the whole tree when the language changes.
+                key(lang) {
                 Scaffold(
                     topBar = {
                         TopAppBar(
-                            title = { Text(if (tab == 0) "trogger" else TABS[tab].title) },
+                            title = { Text(if (tab == 0) "trogger" else TABS[tab].title()) },
                             actions = {
-                                IconButton(onClick = { settings = true }) { Icon(Icons.Default.Settings, "Iestatījumi") }
+                                IconButton(onClick = { settings = true }) { Icon(Icons.Default.Settings, tr("Iestatījumi", "Настройки")) }
                             },
                         )
                     },
@@ -77,7 +82,7 @@ class MainActivity : ComponentActivity() {
                             TABS.forEachIndexed { i, t ->
                                 NavigationBarItem(
                                     selected = tab == i, onClick = { tab = i },
-                                    icon = { Icon(t.icon, null) }, label = { Text(t.title) },
+                                    icon = { Icon(t.icon, null) }, label = { Text(t.title()) },
                                 )
                             }
                         }
@@ -93,6 +98,7 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 if (settings) SettingsDialog { settings = false }
+                }
             }
         }
     }

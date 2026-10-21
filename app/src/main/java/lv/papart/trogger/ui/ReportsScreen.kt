@@ -23,6 +23,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,7 +43,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import lv.papart.trogger.EXPENSE_CATEGORIES
 import lv.papart.trogger.Exporter
-import lv.papart.trogger.MONTHS_LV
+import lv.papart.trogger.LANGUAGES
+import lv.papart.trogger.TrackingService
+import lv.papart.trogger.categoryLabel
+import lv.papart.trogger.monthName
+import lv.papart.trogger.uiLabel
 import lv.papart.trogger.OdoReading
 import lv.papart.trogger.Period
 import lv.papart.trogger.Repo
@@ -50,6 +57,8 @@ import lv.papart.trogger.fmtKm
 import lv.papart.trogger.fmtNum
 import lv.papart.trogger.parseNum
 import lv.papart.trogger.summarize
+import lv.papart.trogger.kmUnit
+import lv.papart.trogger.tr
 import java.util.Calendar
 
 @Composable
@@ -70,7 +79,7 @@ fun ReportsScreen() {
     val fileBase = "trogger_${year}" + (month?.let { "_%02d".format(it + 1) } ?: "")
 
     fun done(ok: Boolean) =
-        Toast.makeText(ctx, if (ok) "Fails saglabāts" else "Neizdevās saglabāt failu", Toast.LENGTH_SHORT).show()
+        Toast.makeText(ctx, if (ok) tr("Fails saglabāts", "Файл сохранён") else tr("Neizdevās saglabāt failu", "Не удалось сохранить файл"), Toast.LENGTH_SHORT).show()
 
     val xlsx = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -103,86 +112,86 @@ fun ReportsScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { year-- }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Iepriekšējais gads") }
+            IconButton(onClick = { year-- }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, tr("Iepriekšējais gads", "Предыдущий год")) }
             Text("$year", style = MaterialTheme.typography.headlineSmall)
-            IconButton(onClick = { year++ }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Nākamais gads") }
+            IconButton(onClick = { year++ }) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, tr("Nākamais gads", "Следующий год")) }
         }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = month == null, onClick = { month = null }, label = { Text("Viss gads") })
-            MONTHS_LV.forEachIndexed { i, m ->
-                FilterChip(selected = month == i, onClick = { month = i }, label = { Text(m.take(3)) })
+            FilterChip(selected = month == null, onClick = { month = null }, label = { Text(tr("Viss gads", "Весь год")) })
+            (0..11).forEach { i ->
+                FilterChip(selected = month == i, onClick = { month = i }, label = { Text(monthName(i).take(3)) })
             }
         }
 
         SectionCard {
-            Text(period.label, style = MaterialTheme.typography.titleMedium)
-            StatRow("Kopējais nobraukums", "${fmtKm(s.totalKm)} km")
-            StatRow("Darba braucieni (${s.shifts})", "${fmtKm(s.businessKm)} km")
-            StatRow("Privātie braucieni", "${fmtKm(s.privateKm)} km")
-            StatRow("Darba īpatsvars", "${fmtKm(s.businessShare * 100)} %", strong = true)
+            Text(period.uiLabel(), style = MaterialTheme.typography.titleMedium)
+            StatRow(tr("Kopējais nobraukums", "Общий пробег"), "${fmtKm(s.totalKm)} ${kmUnit()}")
+            StatRow(tr("Darba braucieni (${s.shifts})", "Рабочие поездки (${s.shifts})"), "${fmtKm(s.businessKm)} ${kmUnit()}")
+            StatRow(tr("Privātie braucieni", "Личные поездки"), "${fmtKm(s.privateKm)} ${kmUnit()}")
+            StatRow(tr("Darba īpatsvars", "Доля рабочих поездок"), "${fmtKm(s.businessShare * 100)} %", strong = true)
             if (s.odometerKm == null) {
                 Text(
-                    "Nav odometra rādījumu pirms un perioda beigās, tāpēc privātie km ir tikai reģistrētie braucieni. " +
-                        "Pievienojiet rādījumu perioda sākumā (piem. 1. janvārī), lai īpatsvars būtu precīzs.",
+                    tr("Nav odometra rādījumu pirms un perioda beigās, tāpēc privātie km ir tikai reģistrētie braucieni. ", "Нет показаний одометра до и в конце периода, поэтому личные км – только записанные поездки. ") +
+                        tr("Pievienojiet rādījumu perioda sākumā (piem. 1. janvārī), lai īpatsvars būtu precīzs.", "Добавьте показание на начало периода (напр. 1 января), чтобы доля была точной."),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error,
                 )
             }
         }
 
         SectionCard {
-            Text("Izdevumi", style = MaterialTheme.typography.titleMedium)
-            EXPENSE_CATEGORIES.forEach { c -> s.byCategory[c]?.let { StatRow(c, fmtEur(it)) } }
-            if (s.fuelLiters > 0) StatRow("Degviela", "${fmtNum(s.fuelLiters, 2)} l")
-            StatRow("Kopā", fmtEur(s.expensesTotal))
-            StatRow("Attiecināmie (${fmtKm(s.businessShare * 100)} % + 100% izdevumi)", fmtEur(s.deductible), strong = true)
+            Text(tr("Izdevumi", "Расходы"), style = MaterialTheme.typography.titleMedium)
+            EXPENSE_CATEGORIES.forEach { c -> s.byCategory[c]?.let { StatRow(categoryLabel(c), fmtEur(it)) } }
+            if (s.fuelLiters > 0) StatRow(categoryLabel("Degviela"), "${fmtNum(s.fuelLiters, 2)} " + tr("l", "л"))
+            StatRow(tr("Kopā", "Итого"), fmtEur(s.expensesTotal))
+            StatRow(tr("Attiecināmie (${fmtKm(s.businessShare * 100)} % + 100% izdevumi)", "Вычитаемые (${fmtKm(s.businessShare * 100)} % + расходы 100%)"), fmtEur(s.deductible), strong = true)
         }
 
         SectionCard {
-            Text("Eksports – ${period.label}", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Eksports", "Экспорт") + " – ${period.uiLabel()}", style = MaterialTheme.typography.titleMedium)
             Button(onClick = { xlsx.launch("$fileBase.xlsx") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.TableChart, null); Text("  Excel (ceļazīmes, izdevumi, kopsavilkums)")
+                Icon(Icons.Default.TableChart, null); Text(tr("  Excel (ceļazīmes, izdevumi, kopsavilkums)", "  Excel (путевые листы, расходы, сводка)"))
             }
             OutlinedButton(onClick = { tripsCsv.launch("${fileBase}_braucieni.csv") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Description, null); Text("  CSV – braucieni")
+                Icon(Icons.Default.Description, null); Text(tr("  CSV – braucieni", "  CSV – поездки"))
             }
             OutlinedButton(onClick = { expCsv.launch("${fileBase}_izdevumi.csv") }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Description, null); Text("  CSV – izdevumi")
+                Icon(Icons.Default.Description, null); Text(tr("  CSV – izdevumi", "  CSV – расходы"))
             }
         }
 
         SectionCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Odometra rādījumi", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(tr("Odometra rādījumi", "Показания одометра"), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 IconButton(onClick = {
                     val start = Calendar.getInstance().apply { clear(); set(year, 0, 1) }.timeInMillis
                     editingReading = OdoReading(
                         dateMs = if (readings.none { it.dateMs in Period.of(year, null) }) start else System.currentTimeMillis(),
                         value = 0.0,
                     )
-                }) { Icon(Icons.Default.Add, "Pievienot rādījumu") }
+                }) { Icon(Icons.Default.Add, tr("Pievienot rādījumu", "Добавить показание")) }
             }
             Text(
-                "Rādījumi gada sākumā un beigās nosaka kopējo nobraukumu, tātad arī privāto km daļu. " +
-                    "Rādījumi no maiņām un degvielas čekiem tiek ņemti vērā automātiski.",
+                tr("Rādījumi gada sākumā un beigās nosaka kopējo nobraukumu, tātad arī privāto km daļu. ", "Показания на начало и конец года задают общий пробег, а значит и долю личных км. ") +
+                    tr("Rādījumi no maiņām un degvielas čekiem tiek ņemti vērā automātiski.", "Показания из смен и чеков за топливо учитываются автоматически."),
                 style = MaterialTheme.typography.bodySmall,
             )
             readings.filter { it.dateMs in Period.of(year, null) }.forEach { r ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${fmtDate(r.dateMs)}  ${r.note}", Modifier.weight(1f))
-                    Text("${fmtNum(r.value, 0)} km", fontWeight = FontWeight.SemiBold)
-                    TextButton(onClick = { editingReading = r }) { Text("Labot") }
+                    Text("${fmtNum(r.value, 0)} ${kmUnit()}", fontWeight = FontWeight.SemiBold)
+                    TextButton(onClick = { editingReading = r }) { Text(tr("Labot", "Изменить")) }
                 }
             }
         }
 
         SectionCard {
-            Text("Kā tiek rēķināts", style = MaterialTheme.typography.titleMedium)
+            Text(tr("Kā tiek rēķināts", "Как считается"), style = MaterialTheme.typography.titleMedium)
             Text(
-                "Darba īpatsvars = darba km ÷ kopējais nobraukums. Attiecināmie izdevumi = izdevumi, kas atzīmēti kā 100% darbam, " +
-                    "plus pārējie izdevumi × īpatsvars. Šo summu var izmantot saimnieciskās darbības izdevumu uzskaitē " +
-                    "(ieņēmumu un izdevumu žurnālā un gada deklarācijā).\n\n" +
-                    "Šī ir palīgierīce, nevis nodokļu konsultācija. Pārbaudiet aktuālās VID prasības " +
-                    "(piem., vai auto izmantošanai saimnieciskajā darbībā piemērojams UVTN) un glabājiet čekus.",
+                tr("Darba īpatsvars = darba km ÷ kopējais nobraukums. Attiecināmie izdevumi = izdevumi, kas atzīmēti kā 100% darbam, ", "Доля рабочих поездок = рабочие км ÷ общий пробег. Вычитаемые расходы = расходы, отмеченные как 100% для работы, ") +
+                    tr("plus pārējie izdevumi × īpatsvars. Šo summu var izmantot saimnieciskās darbības izdevumu uzskaitē ", "плюс остальные расходы × доля. Эту сумму можно использовать в учёте расходов хозяйственной деятельности ") +
+                    tr("(ieņēmumu un izdevumu žurnālā un gada deklarācijā).\n\n", "(журнал доходов и расходов и годовая декларация).\n\n") +
+                    tr("Šī ir palīgierīce, nevis nodokļu konsultācija. Pārbaudiet aktuālās VID prasības ", "Это вспомогательный инструмент, а не налоговая консультация. Проверяйте актуальные требования VID ") +
+                    tr("(piem., vai auto izmantošanai saimnieciskajā darbībā piemērojams UVTN) un glabājiet čekus.", "(напр., применяется ли UVTN к использованию авто в хозяйственной деятельности) и храните чеки."),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -193,7 +202,7 @@ fun ReportsScreen() {
         var value by remember(r) { mutableStateOf(if (r.value > 0) fmtNum(r.value, 0) else "") }
         var note by remember(r) { mutableStateOf(r.note) }
         FormDialog(
-            title = "Odometra rādījums",
+            title = tr("Odometra rādījums", "Показание одометра"),
             onDismiss = { editingReading = null },
             saveEnabled = (parseNum(value) ?: 0.0) > 0,
             onSave = {
@@ -202,9 +211,9 @@ fun ReportsScreen() {
             },
             onDelete = if (r.id != 0L) ({ Repo.deleteReading(r.id); editingReading = null }) else null,
         ) {
-            DateTimeRow("Datums", date, { date = it })
-            NumIn("Rādījums", value, { value = it }, suffix = "km")
-            TextIn("Piezīme", note, { note = it }, placeholder = "Gada sākums")
+            DateTimeRow(tr("Datums", "Дата"), date, { date = it })
+            NumIn(tr("Rādījums", "Показание"), value, { value = it }, suffix = kmUnit())
+            TextIn(tr("Piezīme", "Заметка"), note, { note = it }, placeholder = tr("Gada sākums", "Начало года"))
         }
     }
 }
@@ -219,8 +228,10 @@ fun SettingsDialog(onClose: () -> Unit) {
     var platforms by remember { mutableStateOf(s.platforms.joinToString(", ")) }
     var purpose by remember { mutableStateOf(s.purpose) }
     var stopMin by remember { mutableStateOf(s.autoStopMin.toString()) }
+    var lang by remember { mutableStateOf(s.lang) }
+    val ctx = LocalContext.current
     FormDialog(
-        title = "Iestatījumi",
+        title = tr("Iestatījumi", "Настройки"),
         onDismiss = onClose,
         onSave = {
             Repo.saveSettings(
@@ -230,22 +241,35 @@ fun SettingsDialog(onClose: () -> Unit) {
                     platforms = platforms.split(",").map { it.trim() }.filter { it.isNotEmpty() },
                     purpose = purpose.trim(),
                     autoStopMin = stopMin.toIntOrNull()?.coerceIn(2, 120) ?: s.autoStopMin,
+                    lang = lang,
                 )
             )
+            // Re-post the tracking notification in the new language.
+            if (TrackingService.live.value != null) TrackingService.sync(ctx)
             onClose()
         },
     ) {
-        Text("Šie dati parādās ceļazīmju galvenē.", style = MaterialTheme.typography.bodyMedium)
-        TextIn("Vadītājs (vārds, uzvārds)", driver, { driver = it })
-        TextIn("Reģistrācijas numurs", carReg, { carReg = it }, placeholder = "AB-1234")
-        TextIn("Marka, modelis", carModel, { carModel = it }, placeholder = "Toyota Corolla")
-        TextIn("Degvielas veids", fuel, { fuel = it })
-        TextIn("Platformas (atdalītas ar komatu)", platforms, { platforms = it })
-        TextIn("Noklusējuma brauciena mērķis", purpose, { purpose = it }, singleLine = false)
-        NumIn("Automātiskais brauciens beidzas pēc stāvēšanas", stopMin, { stopMin = it.filter(Char::isDigit) }, suffix = "min")
+        Text("Valoda / Язык", style = MaterialTheme.typography.labelLarge)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            LANGUAGES.forEachIndexed { i, (code, name) ->
+                SegmentedButton(lang == code, { lang = code }, SegmentedButtonDefaults.itemShape(i, LANGUAGES.size)) { Text(name) }
+            }
+        }
         Text(
-            "Īsāks laiks – katrs brauciens starp adresēm atsevišķi. Garāks (piem. 30–60 min) – visa maiņa kā viens brauciens, " +
-                "arī gaidot pie restorāna.",
+            tr("Atskaites un eksports vienmēr ir latviešu valodā.", "Отчёты и экспорт всегда на латышском."),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(tr("Šie dati parādās ceļazīmju galvenē.", "Эти данные указываются в шапке путевых листов."), style = MaterialTheme.typography.bodyMedium)
+        TextIn(tr("Vadītājs (vārds, uzvārds)", "Водитель (имя, фамилия)"), driver, { driver = it })
+        TextIn(tr("Reģistrācijas numurs", "Регистрационный номер"), carReg, { carReg = it }, placeholder = "AB-1234")
+        TextIn(tr("Marka, modelis", "Марка, модель"), carModel, { carModel = it }, placeholder = "Toyota Corolla")
+        TextIn(tr("Degvielas veids", "Вид топлива"), fuel, { fuel = it })
+        TextIn(tr("Platformas (atdalītas ar komatu)", "Платформы (через запятую)"), platforms, { platforms = it })
+        TextIn(tr("Noklusējuma brauciena mērķis", "Цель поездки по умолчанию"), purpose, { purpose = it }, singleLine = false)
+        NumIn(tr("Automātiskais brauciens beidzas pēc stāvēšanas", "Автопоездка завершается после стоянки"), stopMin, { stopMin = it.filter(Char::isDigit) }, suffix = tr("min", "мин"))
+        Text(
+            tr("Īsāks laiks – katrs brauciens starp adresēm atsevišķi. Garāks (piem. 30–60 min) – visa maiņa kā viens brauciens, ", "Короче – каждая поездка между адресами отдельно. Дольше (напр. 30–60 мин) – вся смена одной поездкой, ") +
+                tr("arī gaidot pie restorāna.", "даже с ожиданием у ресторана."),
             style = MaterialTheme.typography.bodySmall,
         )
     }

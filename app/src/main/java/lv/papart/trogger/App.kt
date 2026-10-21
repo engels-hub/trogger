@@ -29,6 +29,8 @@ data class Settings(
     val autoEnabled: Boolean = false,
     /** Minutes standing still before an auto trip is closed. Couriers wait at restaurants, so not too short. */
     val autoStopMin: Int = 10,
+    /** UI language: "lv" or "ru". Exports are always Latvian. */
+    val lang: String = defaultLang(),
 )
 
 /** Single source of truth for the UI; every write goes through here and refreshes the flows. */
@@ -85,6 +87,7 @@ object Repo {
             purpose = p.getString("purpose", d.purpose)!!,
             autoEnabled = p.getBoolean("autoEnabled", d.autoEnabled),
             autoStopMin = p.getInt("autoStopMin", d.autoStopMin),
+            lang = p.getString("lang", d.lang)!!,
         )
     }
 
@@ -96,6 +99,7 @@ object Repo {
             .putString("purpose", s.purpose)
             .putBoolean("autoEnabled", s.autoEnabled)
             .putInt("autoStopMin", s.autoStopMin)
+            .putString("lang", s.lang)
             .apply()
         _settings.value = s
     }

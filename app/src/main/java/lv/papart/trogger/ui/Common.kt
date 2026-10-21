@@ -50,6 +50,7 @@ import androidx.compose.ui.window.DialogProperties
 import lv.papart.trogger.fmtDate
 import lv.papart.trogger.fmtNum
 import lv.papart.trogger.fmtTime
+import lv.papart.trogger.tr
 import java.util.Calendar
 
 private val Carmine = Color(0xFF9E3039)
@@ -107,13 +108,13 @@ fun FormDialog(
                 TopAppBar(
                     title = { Text(title) },
                     navigationIcon = {
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Aizvērt") }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, tr("Aizvērt", "Закрыть")) }
                     },
                     actions = {
                         if (onDelete != null) IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Default.Delete, "Dzēst")
+                            Icon(Icons.Default.Delete, tr("Dzēst", "Удалить"))
                         }
-                        TextButton(onClick = onSave, enabled = saveEnabled) { Text("Saglabāt") }
+                        TextButton(onClick = onSave, enabled = saveEnabled) { Text(tr("Saglabāt", "Сохранить")) }
                     },
                 )
             },
@@ -129,10 +130,10 @@ fun FormDialog(
     if (confirmDelete && onDelete != null) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Dzēst ierakstu?") },
-            text = { Text("To nevarēs atjaunot.") },
-            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text("Dzēst") } },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Atcelt") } },
+            title = { Text(tr("Dzēst ierakstu?", "Удалить запись?")) },
+            text = { Text(tr("To nevarēs atjaunot.", "Восстановить будет нельзя.")) },
+            confirmButton = { TextButton(onClick = { confirmDelete = false; onDelete() }) { Text(tr("Dzēst", "Удалить")) } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text(tr("Atcelt", "Отмена")) } },
         )
     }
 }
