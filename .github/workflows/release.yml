@@ -1,0 +1,56 @@
+name: Release
+
+# Push a tag like v1.0.0 to build a signed APK and publish it as a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (created if missing), e.g. v1.0.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode signing key
+        run: |
+          echo "${{ secrets.TROGGER_KEYSTORE_B64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "TROGGER_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        env:
+          TROGGER_KEYSTORE_PASSWORD: ${{ secrets.TROGGER_KEYSTORE_PASSWORD }}
+          TROGGER_KEY_ALIAS: trogger
+          TROGGER_KEY_PASSWORD: ${{ secrets.TROGGER_KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          export VERSION_NAME="${TAG#v}"
+          chmod +x gradlew
+          ./gradlew --no-configuration-cache assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk "trogger-$TAG.apk"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "trogger-$TAG.apk" --clobber
+          else
+            gh release create "$TAG" "trogger-$TAG.apk" --target "$GITHUB_SHA" --title "trogger $TAG" --generate-notes
+          fi

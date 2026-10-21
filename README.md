@@ -16,6 +16,20 @@ All data stays on the phone in SQLite. There is no account, no network use and n
 
 This is a logging tool, not tax advice. Check the current VID rules yourself.
 
+## Install
+
+Download the APK from the latest [release](https://github.com/engels-hub/trogger/releases/latest) and open it on the phone. Each release is signed with the same key, so a newer one installs over the old one and keeps your data.
+
+## Releasing
+
+Push a version tag. GitHub Actions builds a signed, shrunk release APK and attaches it to a release:
+
+```bash
+git tag v1.0.1 && git push origin v1.0.1
+```
+
+Signing uses the repo secrets `TROGGER_KEYSTORE_B64`, `TROGGER_KEYSTORE_PASSWORD` and `TROGGER_KEY_PASSWORD`. Locally, `./gradlew assembleRelease` reads `~/.android/trogger-release.properties` instead.
+
 ## Build
 
 You need JDK 17+ and the Android SDK (compileSdk 37).
