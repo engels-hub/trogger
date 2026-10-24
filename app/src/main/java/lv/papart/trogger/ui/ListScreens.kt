@@ -104,6 +104,12 @@ fun TripsScreen() {
                                 color = if (t.business) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.tertiary,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
+                            if (t.startAddr.isNotEmpty() || t.endAddr.isNotEmpty()) Text(
+                                "${t.startAddr.ifEmpty { "?" }} → ${t.endAddr.ifEmpty { "?" }}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            )
                         }
                         Text("${fmtKm(t.km)} ${kmUnit()}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
@@ -135,6 +141,8 @@ fun TripDialog(trip: Trip, onClose: () -> Unit) {
     var odoEnd by remember { mutableStateOf(numText(trip.odoEnd)) }
     var gps by remember { mutableStateOf(if (trip.gpsKm > 0) fmtNum(trip.gpsKm) else "") }
     var route by remember { mutableStateOf(trip.route) }
+    var startAddr by remember { mutableStateOf(trip.startAddr) }
+    var endAddr by remember { mutableStateOf(trip.endAddr) }
     var purpose by remember { mutableStateOf(trip.purpose) }
     var platform by remember { mutableStateOf(trip.platform) }
     var business by remember { mutableStateOf(trip.business) }
@@ -152,6 +160,7 @@ fun TripDialog(trip: Trip, onClose: () -> Unit) {
                 trip.copy(
                     startMs = start, endMs = end, odoStart = os, odoEnd = oe,
                     gpsKm = parseNum(gps) ?: 0.0, route = route.trim(),
+                    startAddr = startAddr.trim(), endAddr = endAddr.trim(),
                     purpose = if (business) purpose.trim() else purpose.trim().ifEmpty { "Privāts brauciens" },
                     platform = if (business) platform else "", business = business, note = note.trim(),
                 )
@@ -166,6 +175,8 @@ fun TripDialog(trip: Trip, onClose: () -> Unit) {
         }
         DateTimeRow(tr("Sākums", "Начало"), start, { start = it; if (end < it) end = it })
         DateTimeRow(tr("Beigas", "Конец"), end, { end = it })
+        TextIn(tr("Sākuma adrese", "Адрес начала"), startAddr, { startAddr = it }, placeholder = "Brīvības iela 100, Rīga")
+        TextIn(tr("Beigu adrese", "Адрес конца"), endAddr, { endAddr = it }, placeholder = "Krasta iela 46, Rīga")
         Row {
             NumIn(tr("Odometrs sākumā", "Одометр в начале"), odoStart, { odoStart = it }, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))

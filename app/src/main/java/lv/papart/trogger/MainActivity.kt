@@ -48,6 +48,7 @@ private val TABS = listOf(
 class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
+        Geo.fillMissing(this)
         // Bring tracking back if the system killed it while a shift was open or auto mode is on.
         val granted = checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION) ==
             android.content.pm.PackageManager.PERMISSION_GRANTED

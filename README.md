@@ -7,7 +7,7 @@ A personal mileage log for one car, built for a courier who is self-employed in 
 - **Automatic trips.** The phone's motion sensors (Google Activity Recognition) wake the app when you start driving. GPS then confirms car speed: three fixes in a row at 20 km/h or faster. The trip ends by itself once the car has stood still for a set number of minutes. Without Play services, the app checks GPS every 20 seconds instead.
 - **Manual shifts.** You can start and end a shift with odometer readings. A manual shift never ends on its own.
 - **GPS distance.** A foreground service records distance with the screen off, filtering out jitter and GPS jumps. If the system kills the service, it picks up where it left off.
-- **Ceļazīmes (waybills).** Each trip records date, times, route, purpose, platform, odometer start and end, km, and business or private.
+- **Ceļazīmes (waybills).** Each trip records date, times, start and end address, route, purpose, platform, odometer start and end, km, and business or private. Addresses are looked up from the first and last GPS point of the trip, which needs a network connection. A lookup that fails is retried later, and you can type addresses in by hand.
 - **Expenses.** You can log fuel (with litres), repairs, OCTA, KASKO, technical inspection, parking and so on, with receipt numbers. An expense can be marked as 100% business.
 - **Business share.** This is business km ÷ total km, where total km comes from all odometer readings. Deductible = expenses marked 100% business + all other expenses × business share.
 - **Export.** For a month or a whole year you get an `.xlsx` file with three sheets (Ceļazīmes, Izdevumi, Kopsavilkums), plus semicolon-separated CSV files for trips and expenses.

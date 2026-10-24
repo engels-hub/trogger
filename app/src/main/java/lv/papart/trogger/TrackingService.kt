@@ -299,6 +299,7 @@ class TrackingService : Service(), LocationListener {
 
         if (!hasLast) {
             accept(loc)
+            Geo.fillMissing(this) // start address
             return
         }
         val d = FloatArray(1)
@@ -325,6 +326,7 @@ class TrackingService : Service(), LocationListener {
         val trip = Repo.db.trip(tripId) ?: return afterTrip()
         Repo.saveTrip(trip.copy(endMs = maxOf(anchorWall, trip.startMs), gpsKm = km, active = false))
         if (km >= 0.05) notifySaved(km) else Repo.deleteTrip(trip.id)
+        Geo.fillMissing(this)
         afterTrip()
     }
 

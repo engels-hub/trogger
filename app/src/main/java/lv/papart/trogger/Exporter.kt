@@ -14,15 +14,16 @@ class Sheet(val name: String, val widths: List<Int>, val rows: List<List<Cell?>>
 object Exporter {
 
     private const val PURPOSE_HEADER = "Brauciena mērķis"
+    private const val KM_HEADER = "Nobraukts, km"
 
     fun tripHeader() = listOf(
-        "Nr.", "Datums", "Sākums", "Beigas", "Maršruts", PURPOSE_HEADER, "Platforma",
-        "Odometrs sākumā", "Odometrs beigās", "Nobraukts, km", "GPS, km", "Veids", "Piezīmes",
+        "Nr.", "Datums", "Sākums", "Beigas", "Sākuma adrese", "Beigu adrese", "Maršruts", PURPOSE_HEADER,
+        "Platforma", "Odometrs sākumā", "Odometrs beigās", KM_HEADER, "GPS, km", "Veids", "Piezīmes",
     )
 
     fun tripRow(n: Int, t: Trip): List<Cell?> = listOf(
         N(n.toDouble(), 0), T(fmtDate(t.startMs)), T(fmtTime(t.startMs)),
-        T(t.endMs?.let { fmtTime(it) } ?: ""), T(t.route), T(t.purpose), T(t.platform),
+        T(t.endMs?.let { fmtTime(it) } ?: ""), T(t.startAddr), T(t.endAddr), T(t.route), T(t.purpose), T(t.platform),
         t.odoStart?.let { N(it, 0) }, t.odoEnd?.let { N(it, 0) },
         N(t.km, 1), N(t.gpsKm, 1), T(if (t.business) "Darba" else "Privāts"), T(t.note),
     )
@@ -62,8 +63,8 @@ object Exporter {
             pTrips.mapIndexed { i, t -> tripRow(i + 1, t) } +
             listOf(
                 emptyList(),
-                listOf(T("Darba braucieni kopā, km", bold = true), null, null, null, null, null, null, null, null, N(s.businessKm, 1)),
-                listOf(T("Privātie braucieni (reģistrētie), km", bold = true), null, null, null, null, null, null, null, null, N(s.privateLoggedKm, 1)),
+                totalRow("Darba braucieni kopā, km", s.businessKm),
+                totalRow("Privātie braucieni (reģistrētie), km", s.privateLoggedKm),
             )
 
         val expRows = listOf(
@@ -109,10 +110,16 @@ object Exporter {
         sumRows += listOf(T("Īpatsvars = darba km / kopējais nobraukums. Attiecināmie = 100% izdevumi + dalāmie × īpatsvars."))
 
         return listOf(
-            Sheet("Ceļazīmes", listOf(5, 11, 7, 7, 30, 30, 11, 10, 10, 10, 9, 8, 24), tripRows),
+            Sheet("Ceļazīmes", listOf(5, 11, 7, 7, 28, 28, 22, 30, 11, 10, 10, 10, 9, 8, 24), tripRows),
             Sheet("Izdevumi", listOf(11, 22, 11, 8, 10, 20, 14, 10, 24), expRows),
             Sheet("Kopsavilkums", listOf(42, 14, 12, 12, 14), sumRows),
         )
+    }
+
+    /** A label in column A and the value under the "Nobraukts, km" column. */
+    private fun totalRow(label: String, km: Double): List<Cell?> {
+        val col = tripHeader().indexOf(KM_HEADER)
+        return listOf<Cell?>(T(label, bold = true)) + List(col - 1) { null } + N(km, 1)
     }
 
     // ---- CSV: semicolon + decimal comma + BOM, which is what Latvian Excel opens cleanly ----

@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import kotlinx.coroutines.delay
+import lv.papart.trogger.Geo
 import lv.papart.trogger.Mode
 import lv.papart.trogger.Period
 import lv.papart.trogger.Repo
@@ -205,6 +206,7 @@ fun ShiftScreen() {
                 )
                 if (tracking) StatRow(tr("Ātrums", "Скорость"), tr("${live!!.speedKmh.toInt()} km/h", "${live!!.speedKmh.toInt()} км/ч"))
                 StatRow(tr("Sākts", "Начало"), fmtTime(active.startMs))
+                if (active.startAddr.isNotEmpty()) StatRow(tr("No", "Откуда"), active.startAddr)
                 StatRow(tr("Ilgums", "Длительность"), duration(now - active.startMs))
                 if (active.platform.isNotEmpty()) StatRow(tr("Platforma", "Платформа"), active.platform)
                 active.odoStart?.let { StatRow(tr("Odometrs sākumā", "Одометр в начале"), "${fmtNum(it, 0)} ${kmUnit()}") }
@@ -299,6 +301,7 @@ fun ShiftScreen() {
                     )
                 )
                 TrackingService.sync(ctx)
+                Geo.fillMissing(ctx)
                 showEnd = false
             },
         ) {

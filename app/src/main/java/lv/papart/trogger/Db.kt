@@ -21,6 +21,9 @@ data class Trip(
     val active: Boolean = false,
     /** Started by motion detection; ends itself after the car has stood still. */
     val auto: Boolean = false,
+    /** Street addresses of where the trip began and ended (from GPS, or typed in). */
+    val startAddr: String = "",
+    val endAddr: String = "",
 ) {
     /** Odometer distance is what goes on the ceļazīme; GPS is the fallback. */
     val km: Double
@@ -59,7 +62,7 @@ val EXPENSE_CATEGORIES = listOf(
     "Cits",
 )
 
-class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 1) {
+class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -70,7 +73,8 @@ class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 1) {
                 route TEXT NOT NULL DEFAULT '', purpose TEXT NOT NULL DEFAULT '',
                 platform TEXT NOT NULL DEFAULT '', business INTEGER NOT NULL DEFAULT 1,
                 note TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 0,
-                auto INTEGER NOT NULL DEFAULT 0)"""
+                auto INTEGER NOT NULL DEFAULT 0,
+                start_addr TEXT NOT NULL DEFAULT '', end_addr TEXT NOT NULL DEFAULT '')"""
         )
         db.execSQL(
             """CREATE TABLE expenses(
@@ -93,7 +97,12 @@ class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 1) {
         db.execSQL("CREATE INDEX track_trip ON track_points(trip_id)")
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE trips ADD COLUMN start_addr TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE trips ADD COLUMN end_addr TEXT NOT NULL DEFAULT ''")
+        }
+    }
 
     // ---- trips ----
 
@@ -116,11 +125,26 @@ class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 1) {
             put("route", t.route); put("purpose", t.purpose); put("platform", t.platform)
             put("business", if (t.business) 1 else 0); put("note", t.note)
             put("active", if (t.active) 1 else 0); put("auto", if (t.auto) 1 else 0)
+            // An empty address never overwrites one the geocoder filled in meanwhile.
+            if (t.id == 0L || t.startAddr.isNotEmpty()) put("start_addr", t.startAddr)
+            if (t.id == 0L || t.endAddr.isNotEmpty()) put("end_addr", t.endAddr)
         }
         val db = writableDatabase
         return if (t.id == 0L) db.insert("trips", null, v)
         else { db.update("trips", v, "id = ?", arrayOf(t.id.toString())); t.id }
     }
+
+    fun setAddress(id: Long, start: Boolean, addr: String) {
+        val col = if (start) "start_addr" else "end_addr"
+        writableDatabase.execSQL("UPDATE trips SET $col = ? WHERE id = ?", arrayOf<Any>(addr, id))
+    }
+
+    /** First or last recorded GPS point of a trip. */
+    fun endPoint(tripId: Long, first: Boolean): Pair<Double, Double>? = readableDatabase
+        .rawQuery(
+            "SELECT lat, lon FROM track_points WHERE trip_id = ? ORDER BY t ${if (first) "ASC" else "DESC"} LIMIT 1",
+            arrayOf(tripId.toString())
+        ).use { c -> if (c.moveToFirst()) c.getDouble(0) to c.getDouble(1) else null }
 
     fun updateGpsKm(id: Long, km: Double) {
         writableDatabase.execSQL("UPDATE trips SET gps_km = ? WHERE id = ?", arrayOf<Any>(km, id))
@@ -203,6 +227,7 @@ class Db(context: Context) : SQLiteOpenHelper(context, "trogger.db", null, 1) {
         gpsKm = double("gps_km"), route = str("route"), purpose = str("purpose"),
         platform = str("platform"), business = long("business") == 1L, note = str("note"),
         active = long("active") == 1L, auto = long("auto") == 1L,
+        startAddr = str("start_addr"), endAddr = str("end_addr"),
     )
 
     private fun Cursor.idx(n: String) = getColumnIndexOrThrow(n)
